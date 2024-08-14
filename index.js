@@ -892,6 +892,9 @@ BlindsHTTPAccessory.prototype.httpRequest = function (url, methods, callback) {
         }
     }.bind(this);
 
+    let repeatCommand = url.repeatCommand || 1;
+    let repeatCommandDelay = url.repeatCommandDelay || 500;
+
     const startTimestamp = Date.now();
     const cmdMatch = options().url.match(/(?:file:\/\/)(.*)/i);
 
@@ -928,41 +931,50 @@ BlindsHTTPAccessory.prototype.httpRequest = function (url, methods, callback) {
     }
 
     // handling for http
-    request(
-        options(),
-        function (err, response, body) {
-            const requestTime = Date.now() - startTimestamp;
+    let requestCall = function() {
+        request(
+            options(),
+            function (err, response, body) {
+                const requestTime = Date.now() - startTimestamp;
 
-            if (response && response.timingPhases) {
-                // use `time: true` as request option for profiling
-                this.log.info(`Request profiling: ${JSON.stringify(response.timingPhases)}`);
-            }
-
-            if (!err && response && this.successCodes.includes(response.statusCode)) {
-                if (response.attempts > 1 || this.verbose) {
-                    this.log.info(`Request succeeded in ${requestTime} ms after ${response.attempts} attempt(s)`);
+                if (response && response.timingPhases) {
+                    // use `time: true` as request option for profiling
+                    this.log.info(`Request profiling: ${JSON.stringify(response.timingPhases)}`);
                 }
-
-                if (this.verbose) {
-                    this.log.info(`Body (${response ? response.statusCode : 'not defined'}): ${body}`);
+                repeatCommand--;
+                if (repeatCommand > 0) {
+                    this.log.info(`Will repeat command ${repeatCommand} more time(s) with ${repeatCommandDelay}ms delay`);
+                    setTimeout(function() {
+                        requestCall();
+                    }, repeatCommandDelay);
                 }
+                if (!err && response && this.successCodes.includes(response.statusCode)) {
+                    if (response.attempts > 1 || this.verbose) {
+                        this.log.info(`Request succeeded in ${requestTime} ms after ${response.attempts} attempt(s)`);
+                    }
 
-                return callback(body, requestTime, null);
-            } else {
-                this.log.error(
-                    `Error sending request (HTTP status code ${
-                        response ? response.statusCode : 'not defined'
-                    }): ${err}`,
-                );
-                this.log.error(
-                    `${response ? response.attempts : 'undefined'} attempt(s) failed after ${requestTime} ms`,
-                );
-                this.log.error(`Body: ${body}`);
+                    if (this.verbose) {
+                        this.log.info(`Body (${response ? response.statusCode : 'not defined'}): ${body}`);
+                    }
 
-                return callback(body, requestTime, err);
-            }
-        }.bind(this),
-    );
+                    return callback(body, requestTime, null);
+                } else {
+                    this.log.error(
+                        `Error sending request (HTTP status code ${
+                            response ? response.statusCode : 'not defined'
+                        }): ${err}`,
+                    );
+                    this.log.error(
+                        `${response ? response.attempts : 'undefined'} attempt(s) failed after ${requestTime} ms`,
+                    );
+                    this.log.error(`Body: ${body}`);
+
+                    return callback(body, requestTime, err);
+                }
+            }.bind(this),
+        );
+    };
+    requestCall();
 };
 
 BlindsHTTPAccessory.prototype.getServices = function () {

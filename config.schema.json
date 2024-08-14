@@ -212,6 +212,18 @@
                         "title": "HTTP Body",
                         "type": "string"
                     },
+                    "repeatCommand": {
+                        "title": "Repeat command multiple times",
+                        "type": "integer",
+                        "minimum": 1,
+                        "placeholder": 1
+                    },
+                    "repeatCommandDelay": {
+                        "title": "Delay (ms) between Repeated commands",
+                        "type": "integer",
+                        "minimum": 0,
+                        "placeholder": 2000
+                    },
                     "maxAttempts": {
                         "title": "Maximum HTTP attempts",
                         "type": "integer",
