@@ -973,7 +973,7 @@ BlindsHTTPAccessory.prototype.httpRequest = function (url, methods, callback) {
                 }
             }.bind(this),
         );
-    };
+    }.bind(this);
     requestCall();
 };
 
